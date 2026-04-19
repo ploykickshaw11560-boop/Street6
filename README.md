@@ -62,3 +62,8 @@ character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes
 
 - `character` はキャラクター名で指定します。存在しない名前は自動でキャラクター登録されます。
 - `difficulty` は `Easy` / `Normal` / `Hard` のいずれかを指定してください。
+
+
+## 画面構成
+- `/register`: 登録画面（手入力・CSV取り込み）
+- `/records`: 確認画面（フレーム/コンボ一覧）
