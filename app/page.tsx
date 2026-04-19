@@ -26,6 +26,76 @@ type ComboForm = {
   notes: string;
 };
 
+type CsvRow = Record<string, string>;
+
+const parseCsvLine = (line: string) => {
+  const values: string[] = [];
+  let value = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+
+    if (char === '"') {
+      const nextChar = line[i + 1];
+      if (inQuotes && nextChar === '"') {
+        value += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(value.trim());
+      value = '';
+      continue;
+    }
+
+    value += char;
+  }
+
+  values.push(value.trim());
+  return values;
+};
+
+const parseCsv = (text: string) => {
+  const lines = text
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+
+  if (lines.length < 2) {
+    throw new Error('CSVにヘッダーと1件以上のデータ行を入れてください。');
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+  return lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    return headers.reduce<CsvRow>((row, header, index) => {
+      row[header] = values[index] ?? '';
+      return row;
+    }, {});
+  });
+};
+
+const toInt = (value: string, field: string) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${field} が数値ではありません: ${value}`);
+  }
+  return parsed;
+};
+
+const normalizeDifficulty = (value: string): ComboForm['difficulty'] => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'easy') return 'Easy';
+  if (normalized === 'normal') return 'Normal';
+  if (normalized === 'hard') return 'Hard';
+  throw new Error(`difficulty は Easy / Normal / Hard で指定してください: ${value}`);
+};
+
 export default function Home() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [frames, setFrames] = useState<FrameData[]>([]);
@@ -34,6 +104,9 @@ export default function Home() {
 
   const [characterName, setCharacterName] = useState('');
   const [characterNotes, setCharacterNotes] = useState('');
+
+  const [frameCsvFile, setFrameCsvFile] = useState<File | null>(null);
+  const [comboCsvFile, setComboCsvFile] = useState<File | null>(null);
 
   const [frameForm, setFrameForm] = useState<FrameForm>({
     character_id: '',
@@ -96,6 +169,133 @@ export default function Home() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const ensureCharacters = async (names: string[]) => {
+    const uniqueNames = [...new Set(names.map((name) => name.trim()).filter((name) => name.length > 0))];
+    if (uniqueNames.length === 0) {
+      throw new Error('CSVの character カラムを確認してください。');
+    }
+
+    const { error: upsertError } = await supabase.from('characters').upsert(
+      uniqueNames.map((name) => ({ name })),
+      { onConflict: 'name', ignoreDuplicates: false }
+    );
+
+    if (upsertError) {
+      throw new Error(`キャラクター作成に失敗: ${upsertError.message}`);
+    }
+
+    const { data, error } = await supabase.from('characters').select('id, name').in('name', uniqueNames);
+    if (error || !data) {
+      throw new Error(`キャラクター取得に失敗: ${error?.message}`);
+    }
+
+    return data.reduce<Record<string, string>>((map, character) => {
+      map[character.name] = character.id;
+      return map;
+    }, {});
+  };
+
+  const handleFrameCsvImport = async () => {
+    if (!frameCsvFile) {
+      setStatus('フレームデータCSVファイルを選択してください。');
+      return;
+    }
+
+    try {
+      setStatus('フレームデータCSVをインポート中...');
+      const text = await frameCsvFile.text();
+      const rows = parseCsv(text);
+
+      const requiredHeaders = ['character', 'move_name', 'command', 'startup', 'active', 'recovery', 'on_hit', 'on_block'];
+      const missingHeaders = requiredHeaders.filter((header) => !(header in rows[0]));
+      if (missingHeaders.length > 0) {
+        throw new Error(`不足ヘッダー: ${missingHeaders.join(', ')}`);
+      }
+
+      const characterMap = await ensureCharacters(rows.map((row) => row.character));
+
+      const payload = rows.map((row) => ({
+        character_id: characterMap[row.character.trim()],
+        move_name: row.move_name,
+        command: row.command,
+        startup: toInt(row.startup, 'startup'),
+        active: toInt(row.active, 'active'),
+        recovery: toInt(row.recovery, 'recovery'),
+        on_hit: toInt(row.on_hit, 'on_hit'),
+        on_block: toInt(row.on_block, 'on_block'),
+        notes: row.notes?.trim() ? row.notes.trim() : null
+      }));
+
+      if (payload.some((row) => !row.character_id)) {
+        throw new Error('character カラムに空欄があります。');
+      }
+
+      const { error } = await supabase.from('frame_data').insert(payload);
+      if (error) {
+        throw new Error(`フレームデータ登録に失敗: ${error.message}`);
+      }
+
+      setFrameCsvFile(null);
+      await loadData();
+      setStatus(`フレームデータCSVインポート完了 (${payload.length} 件)`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'フレームCSVインポート中にエラーが発生しました。');
+    }
+  };
+
+  const handleComboCsvImport = async () => {
+    if (!comboCsvFile) {
+      setStatus('コンボCSVファイルを選択してください。');
+      return;
+    }
+
+    try {
+      setStatus('コンボCSVをインポート中...');
+      const text = await comboCsvFile.text();
+      const rows = parseCsv(text);
+
+      const requiredHeaders = [
+        'character',
+        'combo_name',
+        'difficulty',
+        'damage',
+        'drive_gauge_change',
+        'combo_route'
+      ];
+      const missingHeaders = requiredHeaders.filter((header) => !(header in rows[0]));
+      if (missingHeaders.length > 0) {
+        throw new Error(`不足ヘッダー: ${missingHeaders.join(', ')}`);
+      }
+
+      const characterMap = await ensureCharacters(rows.map((row) => row.character));
+
+      const payload = rows.map((row) => ({
+        character_id: characterMap[row.character.trim()],
+        combo_name: row.combo_name,
+        difficulty: normalizeDifficulty(row.difficulty),
+        damage: toInt(row.damage, 'damage'),
+        drive_gauge_change: toInt(row.drive_gauge_change, 'drive_gauge_change'),
+        combo_route: row.combo_route,
+        notes: row.notes?.trim() ? row.notes.trim() : null
+      }));
+
+      if (payload.some((row) => !row.character_id)) {
+        throw new Error('character カラムに空欄があります。');
+      }
+
+      const { error } = await supabase.from('combos').insert(payload);
+      if (error) {
+        throw new Error(`コンボ登録に失敗: ${error.message}`);
+      }
+
+      setComboCsvFile(null);
+      await loadData();
+      setStatus(`コンボCSVインポート完了 (${payload.length} 件)`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'コンボCSVインポート中にエラーが発生しました。');
+    }
+  };
 
   const handleCharacterSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -328,6 +528,22 @@ export default function Home() {
             />
             <button type="submit">コンボを追加</button>
           </form>
+        </article>
+
+        <article className="card">
+          <h2>4. CSVインポート（フレーム）</h2>
+          <p>
+            ヘッダー: character,move_name,command,startup,active,recovery,on_hit,on_block,notes
+          </p>
+          <input type="file" accept=".csv,text/csv" onChange={(event) => setFrameCsvFile(event.target.files?.[0] ?? null)} />
+          <button type="button" onClick={handleFrameCsvImport}>フレームCSVを取り込み</button>
+        </article>
+
+        <article className="card">
+          <h2>5. CSVインポート（コンボ）</h2>
+          <p>ヘッダー: character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes</p>
+          <input type="file" accept=".csv,text/csv" onChange={(event) => setComboCsvFile(event.target.files?.[0] ?? null)} />
+          <button type="button" onClick={handleComboCsvImport}>コンボCSVを取り込み</button>
         </article>
       </section>
 

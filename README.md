@@ -44,3 +44,21 @@ npm run dev
 
 ## 注意
 - 現在のRLSポリシーは「公開読み取り・公開挿入」です。運用時はAuth連携で制限をかけることを推奨します。
+
+
+## CSVインポート
+
+### フレームデータCSV
+```csv
+character,move_name,command,startup,active,recovery,on_hit,on_block,notes
+リュウ,立ち中P,5MP,6,3,12,5,2,差し返しに使う
+```
+
+### コンボCSV
+```csv
+character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes
+リュウ,中足波動,Easy,1420,-1,2MK > 波動拳,安定コンボ
+```
+
+- `character` はキャラクター名で指定します。存在しない名前は自動でキャラクター登録されます。
+- `difficulty` は `Easy` / `Normal` / `Hard` のいずれかを指定してください。
