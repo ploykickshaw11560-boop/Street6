@@ -13,6 +13,46 @@ body {
   box-sizing: border-box;
 }
 
+.menu-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #0d1b36;
+  color: #fff;
+  border-bottom: 1px solid #1f345f;
+}
+
+.menu-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-inner h1 {
+  font-size: 18px;
+}
+
+.menu-inner nav {
+  display: flex;
+  gap: 12px;
+}
+
+.menu-inner a {
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid #2f4f88;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.menu-inner a:hover {
+  background: #1f3f75;
+}
+
 main {
   max-width: 1120px;
   margin: 0 auto;
