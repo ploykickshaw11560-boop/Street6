@@ -386,17 +386,28 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         <details className="accordion-item" open>
           <summary>1. キャラクター登録</summary>
           <div className="accordion-body">
+          <p className="section-intro">
+            最初にキャラクターを登録します。ここで登録したキャラがフレームデータ登録・コンボ登録の「キャラを選択」プルダウンに表示されます。
+          </p>
           <form onSubmit={handleCharacterSubmit}>
-            <input
-              placeholder="例: リュウ"
-              value={characterName}
-              onChange={(event) => setCharacterName(event.target.value)}
-            />
-            <textarea
-              placeholder="キャラの補足メモ"
-              value={characterNotes}
-              onChange={(event) => setCharacterNotes(event.target.value)}
-            />
+            <label className="field">
+              <span className="field-label">キャラクター名 <em>必須</em></span>
+              <span className="field-help">SF6のキャラ名。例: リュウ、ジュリ、キャミィ</span>
+              <input
+                placeholder="例: リュウ"
+                value={characterName}
+                onChange={(event) => setCharacterName(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">補足メモ</span>
+              <span className="field-help">任意。戦闘スタイルや特徴などをメモ</span>
+              <textarea
+                placeholder="例: 波動・昇龍タイプの基本キャラ"
+                value={characterNotes}
+                onChange={(event) => setCharacterNotes(event.target.value)}
+              />
+            </label>
             <button type="submit">キャラクターを追加</button>
           </form>
           </div>
@@ -405,71 +416,110 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         <details className="accordion-item">
           <summary>2. フレームデータ登録</summary>
           <div className="accordion-body">
+          <p className="section-intro">
+            技ごとのフレームデータを 1 件ずつ登録します。数値はすべてフレーム単位 (1F = 1/60秒)。登録したデータは「確認」ページの一覧に並びます。
+          </p>
           <form onSubmit={handleFrameSubmit}>
-            <select
-              value={frameForm.character_id}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, character_id: event.target.value }))}
-              required
-            >
-              <option value="">キャラを選択</option>
-              {characters.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="技名"
-              value={frameForm.move_name}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, move_name: event.target.value }))}
-              required
-            />
-            <input
-              placeholder="コマンド (例: 2MK)"
-              value={frameForm.command}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, command: event.target.value }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="発生"
-              value={frameForm.startup}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, startup: Number(event.target.value) }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="持続"
-              value={frameForm.active}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, active: Number(event.target.value) }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="硬直"
-              value={frameForm.recovery}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, recovery: Number(event.target.value) }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="ヒット時"
-              value={frameForm.on_hit}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, on_hit: Number(event.target.value) }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="ガード時"
-              value={frameForm.on_block}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, on_block: Number(event.target.value) }))}
-              required
-            />
-            <textarea
-              placeholder="補足"
-              value={frameForm.notes}
-              onChange={(event) => setFrameForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
+            <label className="field">
+              <span className="field-label">キャラクター <em>必須</em></span>
+              <span className="field-help">先に「1. キャラクター登録」で追加したキャラから選択</span>
+              <select
+                value={frameForm.character_id}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, character_id: event.target.value }))}
+                required
+              >
+                <option value="">キャラを選択</option>
+                {characters.map((character) => (
+                  <option key={character.id} value={character.id}>
+                    {character.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">技名 <em>必須</em></span>
+              <span className="field-help">例: 立ちMP、波動拳、OD真空波動拳</span>
+              <input
+                placeholder="例: 波動拳"
+                value={frameForm.move_name}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, move_name: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">コマンド <em>必須</em></span>
+              <span className="field-help">入力表記。例: 2MK (しゃがみ中K)、236P (波動拳)</span>
+              <input
+                placeholder="例: 236P"
+                value={frameForm.command}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, command: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">発生 (F) <em>必須</em></span>
+              <span className="field-help">技を入力してから攻撃判定が出るまでのフレーム数</span>
+              <input
+                type="number"
+                placeholder="例: 13"
+                value={frameForm.startup}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, startup: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">持続 (F) <em>必須</em></span>
+              <span className="field-help">攻撃判定が出続けているフレーム数</span>
+              <input
+                type="number"
+                placeholder="例: 3"
+                value={frameForm.active}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, active: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">硬直 (F) <em>必須</em></span>
+              <span className="field-help">攻撃終了後に動けないフレーム数 (空振り時)</span>
+              <input
+                type="number"
+                placeholder="例: 22"
+                value={frameForm.recovery}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, recovery: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">ヒット時の有利不利 (F) <em>必須</em></span>
+              <span className="field-help">プラスは自分有利、マイナスは相手有利。例: +3 なら 3</span>
+              <input
+                type="number"
+                placeholder="例: 3"
+                value={frameForm.on_hit}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, on_hit: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">ガード時の有利不利 (F) <em>必須</em></span>
+              <span className="field-help">ガードされた時の有利不利。例: -2 なら -2 を入力</span>
+              <input
+                type="number"
+                placeholder="例: -2"
+                value={frameForm.on_block}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, on_block: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">補足</span>
+              <span className="field-help">任意。属性 (中段/下段/打撃/投げ)、用途、キャンセル可否などのメモ</span>
+              <textarea
+                placeholder="例: キャンセル可、ヒット時コンボ始動"
+                value={frameForm.notes}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, notes: event.target.value }))}
+              />
+            </label>
             <button type="submit">フレームデータを追加</button>
           </form>
           </div>
@@ -478,62 +528,93 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         <details className="accordion-item">
           <summary>3. コンボ登録</summary>
           <div className="accordion-body">
+          <p className="section-intro">
+            実戦で使うコンボレシピを登録します。難易度・ダメージ・ドライブゲージ消費の目安を一覧で比較できるようになります。
+          </p>
           <form onSubmit={handleComboSubmit}>
-            <select
-              value={comboForm.character_id}
-              onChange={(event) => setComboForm((prev) => ({ ...prev, character_id: event.target.value }))}
-              required
-            >
-              <option value="">キャラを選択</option>
-              {characters.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="コンボ名"
-              value={comboForm.combo_name}
-              onChange={(event) => setComboForm((prev) => ({ ...prev, combo_name: event.target.value }))}
-              required
-            />
-            <select
-              value={comboForm.difficulty}
-              onChange={(event) =>
-                setComboForm((prev) => ({ ...prev, difficulty: event.target.value as ComboForm['difficulty'] }))
-              }
-            >
-              <option value="Easy">Easy</option>
-              <option value="Normal">Normal</option>
-              <option value="Hard">Hard</option>
-            </select>
-            <input
-              type="number"
-              placeholder="ダメージ"
-              value={comboForm.damage}
-              onChange={(event) => setComboForm((prev) => ({ ...prev, damage: Number(event.target.value) }))}
-              required
-            />
-            <input
-              type="number"
-              placeholder="ドライブゲージ増減"
-              value={comboForm.drive_gauge_change}
-              onChange={(event) =>
-                setComboForm((prev) => ({ ...prev, drive_gauge_change: Number(event.target.value) }))
-              }
-              required
-            />
-            <textarea
-              placeholder="コンボルート (例: 2MK > OD波掌撃 > 真空波動拳)"
-              value={comboForm.combo_route}
-              onChange={(event) => setComboForm((prev) => ({ ...prev, combo_route: event.target.value }))}
-              required
-            />
-            <textarea
-              placeholder="補足"
-              value={comboForm.notes}
-              onChange={(event) => setComboForm((prev) => ({ ...prev, notes: event.target.value }))}
-            />
+            <label className="field">
+              <span className="field-label">キャラクター <em>必須</em></span>
+              <span className="field-help">「1. キャラクター登録」で追加したキャラから選択</span>
+              <select
+                value={comboForm.character_id}
+                onChange={(event) => setComboForm((prev) => ({ ...prev, character_id: event.target.value }))}
+                required
+              >
+                <option value="">キャラを選択</option>
+                {characters.map((character) => (
+                  <option key={character.id} value={character.id}>
+                    {character.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">コンボ名 <em>必須</em></span>
+              <span className="field-help">識別しやすい名前。例: 中央始動基本、画面端ノーゲージ</span>
+              <input
+                placeholder="例: 中央始動基本"
+                value={comboForm.combo_name}
+                onChange={(event) => setComboForm((prev) => ({ ...prev, combo_name: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">難易度</span>
+              <span className="field-help">体感の難しさ。Easy / Normal / Hard から選択</span>
+              <select
+                value={comboForm.difficulty}
+                onChange={(event) =>
+                  setComboForm((prev) => ({ ...prev, difficulty: event.target.value as ComboForm['difficulty'] }))
+                }
+              >
+                <option value="Easy">Easy (簡単)</option>
+                <option value="Normal">Normal (普通)</option>
+                <option value="Hard">Hard (難しい)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">ダメージ <em>必須</em></span>
+              <span className="field-help">コンボ完走時の合計ダメージ値</span>
+              <input
+                type="number"
+                placeholder="例: 2800"
+                value={comboForm.damage}
+                onChange={(event) => setComboForm((prev) => ({ ...prev, damage: Number(event.target.value) }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">ドライブゲージ増減 <em>必須</em></span>
+              <span className="field-help">コンボ全体での増減量。消費はマイナス、回収はプラス。例: -2 (2本消費)</span>
+              <input
+                type="number"
+                placeholder="例: -2"
+                value={comboForm.drive_gauge_change}
+                onChange={(event) =>
+                  setComboForm((prev) => ({ ...prev, drive_gauge_change: Number(event.target.value) }))
+                }
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">コンボルート <em>必須</em></span>
+              <span className="field-help">技の繋ぎを「&gt;」区切りで記述。例: 2MK &gt; OD波掌撃 &gt; 真空波動拳</span>
+              <textarea
+                placeholder="例: 2MK > OD波掌撃 > 真空波動拳"
+                value={comboForm.combo_route}
+                onChange={(event) => setComboForm((prev) => ({ ...prev, combo_route: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">補足</span>
+              <span className="field-help">任意。始動条件、画面位置、難所のコツなど</span>
+              <textarea
+                placeholder="例: 画面端限定、目押し2回"
+                value={comboForm.notes}
+                onChange={(event) => setComboForm((prev) => ({ ...prev, notes: event.target.value }))}
+              />
+            </label>
             <button type="submit">コンボを追加</button>
           </form>
           </div>
@@ -542,10 +623,18 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         <details className="accordion-item">
           <summary>4. CSVインポート（フレーム）</summary>
           <div className="accordion-body">
-            <p>
-              ヘッダー: character,move_name,command,startup,active,recovery,on_hit,on_block,notes
+            <p className="section-intro">
+              スプレッドシートで作ったフレームデータを CSV でまとめて取り込みます。CSV内の <code>character</code> 列に書いたキャラ名は未登録なら自動で作成されます。
             </p>
-            <input type="file" accept=".csv,text/csv" onChange={(event) => setFrameCsvFile(event.target.files?.[0] ?? null)} />
+            <p className="csv-headers">
+              <strong>必須ヘッダー (1行目):</strong><br />
+              character, move_name, command, startup, active, recovery, on_hit, on_block, notes
+            </p>
+            <p className="field-help">数値列 (startup / active / recovery / on_hit / on_block) は整数。notes は省略可。文字コードは UTF-8 推奨。</p>
+            <label className="field">
+              <span className="field-label">CSV ファイル</span>
+              <input type="file" accept=".csv,text/csv" onChange={(event) => setFrameCsvFile(event.target.files?.[0] ?? null)} />
+            </label>
             <button type="button" onClick={handleFrameCsvImport}>フレームCSVを取り込み</button>
           </div>
         </details>
@@ -553,8 +642,18 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         <details className="accordion-item">
           <summary>5. CSVインポート（コンボ）</summary>
           <div className="accordion-body">
-            <p>ヘッダー: character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes</p>
-            <input type="file" accept=".csv,text/csv" onChange={(event) => setComboCsvFile(event.target.files?.[0] ?? null)} />
+            <p className="section-intro">
+              コンボ表をまとめて登録します。1 行 = 1 コンボとして取り込みます。
+            </p>
+            <p className="csv-headers">
+              <strong>必須ヘッダー (1行目):</strong><br />
+              character, combo_name, difficulty, damage, drive_gauge_change, combo_route, notes
+            </p>
+            <p className="field-help">difficulty は Easy / Normal / Hard のいずれか。combo_route 内に「,」を含めるなら値全体を「&quot;」で囲んでください。</p>
+            <label className="field">
+              <span className="field-label">CSV ファイル</span>
+              <input type="file" accept=".csv,text/csv" onChange={(event) => setComboCsvFile(event.target.files?.[0] ?? null)} />
+            </label>
             <button type="button" onClick={handleComboCsvImport}>コンボCSVを取り込み</button>
           </div>
         </details>
