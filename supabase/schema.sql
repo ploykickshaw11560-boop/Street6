@@ -88,11 +88,19 @@ drop policy if exists "public read frame_data" on public.frame_data;
 create policy "public read frame_data" on public.frame_data for select using (true);
 drop policy if exists "public write frame_data" on public.frame_data;
 create policy "public write frame_data" on public.frame_data for insert with check (true);
+drop policy if exists "public update frame_data" on public.frame_data;
+create policy "public update frame_data" on public.frame_data for update using (true) with check (true);
+drop policy if exists "public delete frame_data" on public.frame_data;
+create policy "public delete frame_data" on public.frame_data for delete using (true);
 
 drop policy if exists "public read combos" on public.combos;
 create policy "public read combos" on public.combos for select using (true);
 drop policy if exists "public write combos" on public.combos;
 create policy "public write combos" on public.combos for insert with check (true);
+drop policy if exists "public update combos" on public.combos;
+create policy "public update combos" on public.combos for update using (true) with check (true);
+drop policy if exists "public delete combos" on public.combos;
+create policy "public delete combos" on public.combos for delete using (true);
 
 -- Seed master character stats from ultimateframedata.com (SF6 stats).
 insert into public.characters (
