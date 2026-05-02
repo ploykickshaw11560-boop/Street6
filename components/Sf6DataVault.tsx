@@ -2,17 +2,32 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Character, Combo, FrameData } from '@/lib/types';
+import {
+  MOVE_CATEGORIES,
+  type Character,
+  type Combo,
+  type FrameData,
+  type MasterMove,
+  type MoveCategory
+} from '@/lib/types';
 
 type FrameForm = {
   character_id: string;
-  move_name: string;
-  command: string;
+  master_move_id: string;
   startup: number;
   active: number;
   recovery: number;
   on_hit: number;
   on_block: number;
+  notes: string;
+};
+
+type MasterMoveForm = {
+  character_id: string;
+  move_name: string;
+  command: string;
+  category: MoveCategory;
+  display_order: number;
   notes: string;
 };
 
@@ -96,13 +111,15 @@ const normalizeDifficulty = (value: string): ComboForm['difficulty'] => {
   throw new Error(`difficulty は Easy / Normal / Hard で指定してください: ${value}`);
 };
 
-type ViewMode = 'register' | 'records';
+type ViewMode = 'register' | 'records' | 'characters';
 
 export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [masterMoves, setMasterMoves] = useState<MasterMove[]>([]);
   const [frames, setFrames] = useState<FrameData[]>([]);
   const [combos, setCombos] = useState<Combo[]>([]);
   const [status, setStatus] = useState('読み込み中...');
+  const [selectedCharacterId, setSelectedCharacterId] = useState('');
 
   const [characterName, setCharacterName] = useState('');
   const [characterNotes, setCharacterNotes] = useState('');
@@ -112,13 +129,21 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
   const [frameForm, setFrameForm] = useState<FrameForm>({
     character_id: '',
-    move_name: '',
-    command: '',
+    master_move_id: '',
     startup: 0,
     active: 0,
     recovery: 0,
     on_hit: 0,
     on_block: 0,
+    notes: ''
+  });
+
+  const [masterMoveForm, setMasterMoveForm] = useState<MasterMoveForm>({
+    character_id: '',
+    move_name: '',
+    command: '',
+    category: '通常技',
+    display_order: 0,
     notes: ''
   });
 
@@ -136,8 +161,12 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
   const loadData = async () => {
     setStatus('データを同期しています...');
-    const [charactersResult, framesResult, combosResult] = await Promise.all([
+    const [charactersResult, masterMovesResult, framesResult, combosResult] = await Promise.all([
       supabase.from('characters').select('*').order('name', { ascending: true }),
+      supabase
+        .from('master_moves')
+        .select('*, character:characters(name)')
+        .order('display_order', { ascending: true }),
       supabase
         .from('frame_data')
         .select('*, character:characters(name)')
@@ -148,22 +177,31 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         .order('created_at', { ascending: false })
     ]);
 
-    if (charactersResult.error || framesResult.error || combosResult.error) {
+    if (
+      charactersResult.error ||
+      masterMovesResult.error ||
+      framesResult.error ||
+      combosResult.error
+    ) {
       setStatus('読み込みに失敗しました。Supabaseのテーブル作成とRLS設定を確認してください。');
       return;
     }
 
-    const characterRows = charactersResult.data ?? [];
+    const characterRows = (charactersResult.data ?? []) as Character[];
+    const masterMoveRows = (masterMovesResult.data ?? []) as MasterMove[];
     const frameRows = (framesResult.data ?? []) as FrameData[];
     const comboRows = (combosResult.data ?? []) as Combo[];
 
     setCharacters(characterRows);
+    setMasterMoves(masterMoveRows);
     setFrames(frameRows);
     setCombos(comboRows);
 
     const firstCharacterId = characterRows[0]?.id ?? '';
+    setSelectedCharacterId((prev) => prev || firstCharacterId);
     setFrameForm((prev) => ({ ...prev, character_id: prev.character_id || firstCharacterId }));
     setComboForm((prev) => ({ ...prev, character_id: prev.character_id || firstCharacterId }));
+    setMasterMoveForm((prev) => ({ ...prev, character_id: prev.character_id || firstCharacterId }));
 
     setStatus('同期完了');
   };
@@ -322,8 +360,21 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
   const handleFrameSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const selectedMove = masterMoves.find((move) => move.id === frameForm.master_move_id);
+    if (!selectedMove) {
+      setStatus('技マスタから技を選択してください。');
+      return;
+    }
+
     const { error } = await supabase.from('frame_data').insert({
-      ...frameForm,
+      character_id: frameForm.character_id,
+      move_name: selectedMove.move_name,
+      command: selectedMove.command,
+      startup: frameForm.startup,
+      active: frameForm.active,
+      recovery: frameForm.recovery,
+      on_hit: frameForm.on_hit,
+      on_block: frameForm.on_block,
       notes: frameForm.notes.trim() || null
     });
 
@@ -334,8 +385,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
     setFrameForm((prev) => ({
       ...prev,
-      move_name: '',
-      command: '',
+      master_move_id: '',
       startup: 0,
       active: 0,
       recovery: 0,
@@ -343,6 +393,52 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
       on_block: 0,
       notes: ''
     }));
+    await loadData();
+  };
+
+  const handleMasterMoveSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!masterMoveForm.character_id) {
+      setStatus('キャラクターを選択してください。');
+      return;
+    }
+    if (!masterMoveForm.move_name.trim() || !masterMoveForm.command.trim()) {
+      setStatus('技名とコマンドは必須です。');
+      return;
+    }
+
+    const { error } = await supabase.from('master_moves').insert({
+      character_id: masterMoveForm.character_id,
+      move_name: masterMoveForm.move_name.trim(),
+      command: masterMoveForm.command.trim(),
+      category: masterMoveForm.category,
+      display_order: masterMoveForm.display_order,
+      notes: masterMoveForm.notes.trim() || null
+    });
+
+    if (error) {
+      setStatus(`技マスター登録エラー: ${error.message}`);
+      return;
+    }
+
+    setMasterMoveForm((prev) => ({
+      ...prev,
+      move_name: '',
+      command: '',
+      notes: ''
+    }));
+    await loadData();
+  };
+
+  const handleMasterMoveDelete = async (id: string) => {
+    if (!confirm('この技マスタを削除しますか? (該当キャラの過去フレームデータには影響しません)')) {
+      return;
+    }
+    const { error } = await supabase.from('master_moves').delete().eq('id', id);
+    if (error) {
+      setStatus(`技マスター削除エラー: ${error.message}`);
+      return;
+    }
     await loadData();
   };
 
@@ -417,15 +513,17 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
           <summary>2. フレームデータ登録</summary>
           <div className="accordion-body">
           <p className="section-intro">
-            技ごとのフレームデータを 1 件ずつ登録します。数値はすべてフレーム単位 (1F = 1/60秒)。登録したデータは「確認」ページの一覧に並びます。
+            技マスタに登録した技を選んで、フレームデータを記録します。技がリストに無い場合は先に「6. 技マスター登録」で追加してください。数値はすべてフレーム単位 (1F = 1/60秒)。
           </p>
           <form onSubmit={handleFrameSubmit}>
             <label className="field">
               <span className="field-label">キャラクター <em>必須</em></span>
-              <span className="field-help">先に「1. キャラクター登録」で追加したキャラから選択</span>
+              <span className="field-help">マスタに登録済みのキャラから選択</span>
               <select
                 value={frameForm.character_id}
-                onChange={(event) => setFrameForm((prev) => ({ ...prev, character_id: event.target.value }))}
+                onChange={(event) =>
+                  setFrameForm((prev) => ({ ...prev, character_id: event.target.value, master_move_id: '' }))
+                }
                 required
               >
                 <option value="">キャラを選択</option>
@@ -437,24 +535,31 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
               </select>
             </label>
             <label className="field">
-              <span className="field-label">技名 <em>必須</em></span>
-              <span className="field-help">例: 立ちMP、波動拳、OD真空波動拳</span>
-              <input
-                placeholder="例: 波動拳"
-                value={frameForm.move_name}
-                onChange={(event) => setFrameForm((prev) => ({ ...prev, move_name: event.target.value }))}
+              <span className="field-label">技 (マスタから選択) <em>必須</em></span>
+              <span className="field-help">
+                選択したキャラの技マスタが対象。技を選ぶと技名・コマンドが自動セットされます。
+              </span>
+              <select
+                value={frameForm.master_move_id}
+                onChange={(event) => setFrameForm((prev) => ({ ...prev, master_move_id: event.target.value }))}
                 required
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">コマンド <em>必須</em></span>
-              <span className="field-help">入力表記。例: 2MK (しゃがみ中K)、236P (波動拳)</span>
-              <input
-                placeholder="例: 236P"
-                value={frameForm.command}
-                onChange={(event) => setFrameForm((prev) => ({ ...prev, command: event.target.value }))}
-                required
-              />
+                disabled={!frameForm.character_id}
+              >
+                <option value="">
+                  {frameForm.character_id
+                    ? masterMoves.filter((m) => m.character_id === frameForm.character_id).length === 0
+                      ? '技マスタが未登録です（6. 技マスター登録で追加）'
+                      : '技を選択'
+                    : 'まずキャラを選択してください'}
+                </option>
+                {masterMoves
+                  .filter((move) => move.character_id === frameForm.character_id)
+                  .map((move) => (
+                    <option key={move.id} value={move.id}>
+                      [{move.category}] {move.move_name} ({move.command})
+                    </option>
+                  ))}
+              </select>
             </label>
             <label className="field">
               <span className="field-label">発生 (F) <em>必須</em></span>
@@ -657,6 +762,213 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
             <button type="button" onClick={handleComboCsvImport}>コンボCSVを取り込み</button>
           </div>
         </details>
+
+        <details className="accordion-item">
+          <summary>6. 技マスター登録</summary>
+          <div className="accordion-body">
+            <p className="section-intro">
+              キャラごとの技マスタ (技名 + コマンド + 種類) を管理します。ここに登録した技がフレームデータ登録のプルダウンと「キャラ情報」ページに反映されます。
+            </p>
+            <form onSubmit={handleMasterMoveSubmit}>
+              <label className="field">
+                <span className="field-label">キャラクター <em>必須</em></span>
+                <span className="field-help">対象のキャラを選択</span>
+                <select
+                  value={masterMoveForm.character_id}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({ ...prev, character_id: event.target.value }))
+                  }
+                  required
+                >
+                  <option value="">キャラを選択</option>
+                  {characters.map((character) => (
+                    <option key={character.id} value={character.id}>
+                      {character.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">技名 <em>必須</em></span>
+                <span className="field-help">例: 立ち弱K、波動拳、真空波動拳</span>
+                <input
+                  placeholder="例: 波動拳"
+                  value={masterMoveForm.move_name}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({ ...prev, move_name: event.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">コマンド <em>必須</em></span>
+                <span className="field-help">入力表記。例: 5LK、2MK、236P、623K</span>
+                <input
+                  placeholder="例: 236P"
+                  value={masterMoveForm.command}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({ ...prev, command: event.target.value }))
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">種類 <em>必須</em></span>
+                <span className="field-help">
+                  通常技 / 特殊技 / 必殺技 / OD必殺技 / SA1 / SA2 / SA3 / 投げ / その他
+                </span>
+                <select
+                  value={masterMoveForm.category}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({
+                      ...prev,
+                      category: event.target.value as MoveCategory
+                    }))
+                  }
+                  required
+                >
+                  {MOVE_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">表示順</span>
+                <span className="field-help">数字が小さいほど上に表示。同種別内での並び替え用 (任意)</span>
+                <input
+                  type="number"
+                  value={masterMoveForm.display_order}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({ ...prev, display_order: Number(event.target.value) }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">補足</span>
+                <span className="field-help">任意。属性 (中段/下段) や特記事項</span>
+                <textarea
+                  placeholder="例: 中段、キャンセル可"
+                  value={masterMoveForm.notes}
+                  onChange={(event) =>
+                    setMasterMoveForm((prev) => ({ ...prev, notes: event.target.value }))
+                  }
+                />
+              </label>
+              <button type="submit">技マスタを追加</button>
+            </form>
+
+            {masterMoveForm.character_id && (
+              <div className="master-move-list">
+                <h3>登録済み技マスタ</h3>
+                {masterMoves.filter((m) => m.character_id === masterMoveForm.character_id).length === 0 ? (
+                  <p className="field-help">このキャラの技マスタはまだありません。</p>
+                ) : (
+                  <ul>
+                    {masterMoves
+                      .filter((m) => m.character_id === masterMoveForm.character_id)
+                      .map((move) => (
+                        <li key={move.id}>
+                          <span className="move-pill">{move.category}</span>
+                          <strong>{move.move_name}</strong>
+                          <code>{move.command}</code>
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={() => handleMasterMoveDelete(move.id)}
+                          >
+                            削除
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+      </section>
+      )}
+
+      {mode === 'characters' && (
+      <section className="character-info">
+        <div className="character-picker">
+          <label className="field">
+            <span className="field-label">キャラクター</span>
+            <select
+              value={selectedCharacterId}
+              onChange={(event) => setSelectedCharacterId(event.target.value)}
+            >
+              <option value="">キャラを選択</option>
+              {characters.map((character) => (
+                <option key={character.id} value={character.id}>
+                  {character.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {selectedCharacterId && (() => {
+          const target = characters.find((c) => c.id === selectedCharacterId);
+          if (!target) return null;
+          const moves = masterMoves.filter((m) => m.character_id === target.id);
+          const movesByCategory = MOVE_CATEGORIES.map((cat) => ({
+            category: cat,
+            items: moves.filter((m) => m.category === cat)
+          })).filter((group) => group.items.length > 0);
+          return (
+            <>
+              <div className="char-stats">
+                <h2>{target.name}</h2>
+                {target.archetype && <p className="archetype">{target.archetype}</p>}
+                <div className="stats-grid">
+                  <div><span className="stat-label">体力</span><span className="stat-value">{target.health ?? '-'}</span></div>
+                  <div><span className="stat-label">前歩き</span><span className="stat-value">{target.walk_fwd ?? '-'}</span></div>
+                  <div><span className="stat-label">後歩き</span><span className="stat-value">{target.walk_bwd ?? '-'}</span></div>
+                  <div><span className="stat-label">前ダッシュ (F)</span><span className="stat-value">{target.dash_fwd_frames ?? '-'}</span></div>
+                  <div><span className="stat-label">後ダッシュ (F)</span><span className="stat-value">{target.dash_bwd_frames ?? '-'}</span></div>
+                  <div><span className="stat-label">前ダッシュ距離</span><span className="stat-value">{target.dash_fwd_distance ?? '-'}</span></div>
+                  <div><span className="stat-label">後ダッシュ距離</span><span className="stat-value">{target.dash_bwd_distance ?? '-'}</span></div>
+                  <div><span className="stat-label">プリジャンプ (F)</span><span className="stat-value">{target.pre_jump ?? '-'}</span></div>
+                </div>
+                {target.style_notes && <p className="char-notes">{target.style_notes}</p>}
+              </div>
+
+              <div className="move-list">
+                <h2>技マスタ</h2>
+                {moves.length === 0 ? (
+                  <p className="field-help">このキャラの技マスタはまだ登録されていません。「登録」→「6. 技マスター登録」から追加してください。</p>
+                ) : (
+                  movesByCategory.map((group) => (
+                    <div key={group.category} className="move-group">
+                      <h3>{group.category}</h3>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>技名</th>
+                            <th>コマンド</th>
+                            <th>補足</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.items.map((move) => (
+                            <tr key={move.id}>
+                              <td>{move.move_name}</td>
+                              <td><code>{move.command}</code></td>
+                              <td>{move.notes ?? ''}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          );
+        })()}
       </section>
       )}
 

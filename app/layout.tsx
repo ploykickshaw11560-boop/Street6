@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <Link href="/register">登録</Link>
               <Link href="/records">確認</Link>
+              <Link href="/characters">キャラ情報</Link>
             </nav>
           </div>
         </header>
