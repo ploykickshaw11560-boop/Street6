@@ -935,15 +935,14 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
       )}
 
       {mode === 'characters' && (
-      <section className="character-info">
-        <div className="stats-table-wrap">
-          <div className="stats-table-header">
-            <h2>基礎情報一覧</h2>
+      <section className="accordion character-info">
+        <details className="accordion-item" open>
+          <summary>基礎情報一覧 ({characters.length}キャラ)</summary>
+          <div className="accordion-body">
             <p className="field-help">
-              全キャラの基礎ステータス比較表。列ヘッダーをクリックすると並び替えできます。下のセレクトでキャラを選ぶと詳細と技マスタが見られます。
+              全キャラの基礎ステータス比較表。列ヘッダーをクリックで並び替え、行クリックでそのキャラの詳細パネルを開きます。
             </p>
-          </div>
-          <div className="table-wrap">
+            <div className="table-wrap">
             <table className="stats-table">
               <thead>
                 <tr>
@@ -1005,86 +1004,95 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
-        </div>
+        </details>
 
-        <div className="character-picker">
-          <label className="field">
-            <span className="field-label">キャラクター詳細</span>
-            <span className="field-help">選択するとステータス詳細と技マスタが下に表示されます</span>
-            <select
-              value={selectedCharacterId}
-              onChange={(event) => setSelectedCharacterId(event.target.value)}
-            >
-              <option value="">キャラを選択</option>
-              {characters.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <details className="accordion-item" open>
+          <summary>
+            キャラクター詳細{(() => {
+              const target = characters.find((c) => c.id === selectedCharacterId);
+              return target ? `: ${target.name}` : '';
+            })()}
+          </summary>
+          <div className="accordion-body">
+            <label className="field">
+              <span className="field-label">キャラクター</span>
+              <span className="field-help">選択するとステータス詳細と技マスタが下に表示されます</span>
+              <select
+                value={selectedCharacterId}
+                onChange={(event) => setSelectedCharacterId(event.target.value)}
+              >
+                <option value="">キャラを選択</option>
+                {characters.map((character) => (
+                  <option key={character.id} value={character.id}>
+                    {character.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        {selectedCharacterId && (() => {
-          const target = characters.find((c) => c.id === selectedCharacterId);
-          if (!target) return null;
-          const moves = masterMoves.filter((m) => m.character_id === target.id);
-          const movesByCategory = MOVE_CATEGORIES.map((cat) => ({
-            category: cat,
-            items: moves.filter((m) => m.category === cat)
-          })).filter((group) => group.items.length > 0);
-          return (
-            <>
-              <div className="char-stats">
-                <h2>{target.name}</h2>
-                {target.archetype && <p className="archetype">{target.archetype}</p>}
-                <div className="stats-grid">
-                  <div><span className="stat-label">体力</span><span className="stat-value">{target.health ?? '-'}</span></div>
-                  <div><span className="stat-label">前歩き</span><span className="stat-value">{target.walk_fwd ?? '-'}</span></div>
-                  <div><span className="stat-label">後歩き</span><span className="stat-value">{target.walk_bwd ?? '-'}</span></div>
-                  <div><span className="stat-label">前ダッシュ (F)</span><span className="stat-value">{target.dash_fwd_frames ?? '-'}</span></div>
-                  <div><span className="stat-label">後ダッシュ (F)</span><span className="stat-value">{target.dash_bwd_frames ?? '-'}</span></div>
-                  <div><span className="stat-label">前ダッシュ距離</span><span className="stat-value">{target.dash_fwd_distance ?? '-'}</span></div>
-                  <div><span className="stat-label">後ダッシュ距離</span><span className="stat-value">{target.dash_bwd_distance ?? '-'}</span></div>
-                  <div><span className="stat-label">プリジャンプ (F)</span><span className="stat-value">{target.pre_jump ?? '-'}</span></div>
-                </div>
-                {target.style_notes && <p className="char-notes">{target.style_notes}</p>}
-              </div>
-
-              <div className="move-list">
-                <h2>技マスタ</h2>
-                {moves.length === 0 ? (
-                  <p className="field-help">このキャラの技マスタはまだ登録されていません。「登録」→「6. 技マスター登録」から追加してください。</p>
-                ) : (
-                  movesByCategory.map((group) => (
-                    <div key={group.category} className="move-group">
-                      <h3>{group.category}</h3>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>技名</th>
-                            <th>コマンド</th>
-                            <th>補足</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.items.map((move) => (
-                            <tr key={move.id}>
-                              <td>{move.move_name}</td>
-                              <td><code>{move.command}</code></td>
-                              <td>{move.notes ?? ''}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+            {selectedCharacterId && (() => {
+              const target = characters.find((c) => c.id === selectedCharacterId);
+              if (!target) return null;
+              const moves = masterMoves.filter((m) => m.character_id === target.id);
+              const movesByCategory = MOVE_CATEGORIES.map((cat) => ({
+                category: cat,
+                items: moves.filter((m) => m.category === cat)
+              })).filter((group) => group.items.length > 0);
+              return (
+                <>
+                  <div className="char-stats">
+                    <h2>{target.name}</h2>
+                    {target.archetype && <p className="archetype">{target.archetype}</p>}
+                    <div className="stats-grid">
+                      <div><span className="stat-label">体力</span><span className="stat-value">{target.health ?? '-'}</span></div>
+                      <div><span className="stat-label">前歩き</span><span className="stat-value">{target.walk_fwd ?? '-'}</span></div>
+                      <div><span className="stat-label">後歩き</span><span className="stat-value">{target.walk_bwd ?? '-'}</span></div>
+                      <div><span className="stat-label">前ダッシュ (F)</span><span className="stat-value">{target.dash_fwd_frames ?? '-'}</span></div>
+                      <div><span className="stat-label">後ダッシュ (F)</span><span className="stat-value">{target.dash_bwd_frames ?? '-'}</span></div>
+                      <div><span className="stat-label">前ダッシュ距離</span><span className="stat-value">{target.dash_fwd_distance ?? '-'}</span></div>
+                      <div><span className="stat-label">後ダッシュ距離</span><span className="stat-value">{target.dash_bwd_distance ?? '-'}</span></div>
+                      <div><span className="stat-label">プリジャンプ (F)</span><span className="stat-value">{target.pre_jump ?? '-'}</span></div>
                     </div>
-                  ))
-                )}
-              </div>
-            </>
-          );
-        })()}
+                    {target.style_notes && <p className="char-notes">{target.style_notes}</p>}
+                  </div>
+
+                  <div className="move-list">
+                    <h2>技マスタ</h2>
+                    {moves.length === 0 ? (
+                      <p className="field-help">このキャラの技マスタはまだ登録されていません。「登録」→「6. 技マスター登録」から追加してください。</p>
+                    ) : (
+                      movesByCategory.map((group) => (
+                        <div key={group.category} className="move-group">
+                          <h3>{group.category}</h3>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>技名</th>
+                                <th>コマンド</th>
+                                <th>補足</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.items.map((move) => (
+                                <tr key={move.id}>
+                                  <td>{move.move_name}</td>
+                                  <td><code>{move.command}</code></td>
+                                  <td>{move.notes ?? ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </details>
       </section>
       )}
 
