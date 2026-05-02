@@ -425,6 +425,83 @@ th {
   padding: 16px;
 }
 
+.stats-table-wrap {
+  background: #fff;
+  border: 1px solid #dce3f2;
+  border-radius: 16px;
+  padding: 16px 16px 0;
+}
+
+.stats-table-header {
+  margin-bottom: 12px;
+}
+
+.stats-table-header h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table thead th {
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  background: #f3f6fe;
+  white-space: nowrap;
+}
+
+.stats-table thead th:hover {
+  background: #e3ebfa;
+}
+
+.stats-table thead th::after {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  vertical-align: middle;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  opacity: 0.3;
+  border-top: 5px solid #4a5876;
+}
+
+.stats-table thead th.sort-asc::after {
+  border-top: 0;
+  border-bottom: 5px solid #1f5bcc;
+  opacity: 1;
+}
+
+.stats-table thead th.sort-desc::after {
+  border-top: 5px solid #1f5bcc;
+  border-bottom: 0;
+  opacity: 1;
+}
+
+.stats-table tbody tr {
+  cursor: pointer;
+}
+
+.stats-table tbody tr:hover {
+  background: #f6f8fd;
+}
+
+.stats-table tbody tr.is-selected {
+  background: #eef3fc;
+}
+
+.stats-table tbody td {
+  padding: 8px 10px;
+}
+
 .char-stats {
   background: #fff;
   border: 1px solid #dce3f2;
