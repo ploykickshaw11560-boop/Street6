@@ -413,9 +413,19 @@ th {
 }
 
 .character-info {
-  display: grid;
-  gap: 20px;
   margin-top: 16px;
+}
+
+.character-info .accordion-item > summary {
+  font-size: 16px;
+}
+
+.character-info .char-stats,
+.character-info .move-list {
+  background: #f6f8fd;
+  border: 1px solid #dce3f2;
+  border-radius: 12px;
+  margin-top: 14px;
 }
 
 .character-picker {
