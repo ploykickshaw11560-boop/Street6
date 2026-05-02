@@ -123,6 +123,92 @@ h3 {
   background: #eef2fa;
 }
 
+.accordion {
+  display: grid;
+  gap: 8px;
+}
+
+.accordion-item {
+  background: #fff;
+  border: 1px solid #dce3f2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.accordion-item > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #172033;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+
+.accordion-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion-item > summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #4a5876;
+  border-bottom: 2px solid #4a5876;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.accordion-item[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.accordion-item > summary:hover {
+  background: #f6f8fd;
+}
+
+.accordion-body {
+  padding: 4px 18px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.accordion-body > p {
+  margin: 0;
+  font-size: 13px;
+  color: #4a5876;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.accordion-body > form {
+  margin-top: 0;
+}
+
+.accordion-body input[type='file'] {
+  padding: 8px;
+  font-size: 13px;
+  background: #f6f8fd;
+  cursor: pointer;
+}
+
+.accordion-body input[type='file']::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid #ccd5e8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.accordion-body input[type='file']::file-selector-button:hover {
+  background: #eef2fa;
+}
+
 form {
   display: grid;
   gap: 10px;

@@ -382,9 +382,10 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
       </section>
 
       {mode === 'register' && (
-      <section className="cards">
-        <article className="card">
-          <h2>1. キャラクター登録</h2>
+      <section className="accordion">
+        <details className="accordion-item" open>
+          <summary>1. キャラクター登録</summary>
+          <div className="accordion-body">
           <form onSubmit={handleCharacterSubmit}>
             <input
               placeholder="例: リュウ"
@@ -398,10 +399,12 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
             />
             <button type="submit">キャラクターを追加</button>
           </form>
-        </article>
+          </div>
+        </details>
 
-        <article className="card">
-          <h2>2. フレームデータ登録</h2>
+        <details className="accordion-item">
+          <summary>2. フレームデータ登録</summary>
+          <div className="accordion-body">
           <form onSubmit={handleFrameSubmit}>
             <select
               value={frameForm.character_id}
@@ -469,10 +472,12 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
             />
             <button type="submit">フレームデータを追加</button>
           </form>
-        </article>
+          </div>
+        </details>
 
-        <article className="card">
-          <h2>3. コンボ登録</h2>
+        <details className="accordion-item">
+          <summary>3. コンボ登録</summary>
+          <div className="accordion-body">
           <form onSubmit={handleComboSubmit}>
             <select
               value={comboForm.character_id}
@@ -531,23 +536,28 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
             />
             <button type="submit">コンボを追加</button>
           </form>
-        </article>
+          </div>
+        </details>
 
-        <article className="card">
-          <h2>4. CSVインポート（フレーム）</h2>
-          <p>
-            ヘッダー: character,move_name,command,startup,active,recovery,on_hit,on_block,notes
-          </p>
-          <input type="file" accept=".csv,text/csv" onChange={(event) => setFrameCsvFile(event.target.files?.[0] ?? null)} />
-          <button type="button" onClick={handleFrameCsvImport}>フレームCSVを取り込み</button>
-        </article>
+        <details className="accordion-item">
+          <summary>4. CSVインポート（フレーム）</summary>
+          <div className="accordion-body">
+            <p>
+              ヘッダー: character,move_name,command,startup,active,recovery,on_hit,on_block,notes
+            </p>
+            <input type="file" accept=".csv,text/csv" onChange={(event) => setFrameCsvFile(event.target.files?.[0] ?? null)} />
+            <button type="button" onClick={handleFrameCsvImport}>フレームCSVを取り込み</button>
+          </div>
+        </details>
 
-        <article className="card">
-          <h2>5. CSVインポート（コンボ）</h2>
-          <p>ヘッダー: character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes</p>
-          <input type="file" accept=".csv,text/csv" onChange={(event) => setComboCsvFile(event.target.files?.[0] ?? null)} />
-          <button type="button" onClick={handleComboCsvImport}>コンボCSVを取り込み</button>
-        </article>
+        <details className="accordion-item">
+          <summary>5. CSVインポート（コンボ）</summary>
+          <div className="accordion-body">
+            <p>ヘッダー: character,combo_name,difficulty,damage,drive_gauge_change,combo_route,notes</p>
+            <input type="file" accept=".csv,text/csv" onChange={(event) => setComboCsvFile(event.target.files?.[0] ?? null)} />
+            <button type="button" onClick={handleComboCsvImport}>コンボCSVを取り込み</button>
+          </div>
+        </details>
       </section>
       )}
 
