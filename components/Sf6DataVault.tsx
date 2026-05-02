@@ -552,6 +552,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
       )}
 
       {mode === 'records' && (
+      <>
       <section className="section">
         <h2>フレームデータ一覧</h2>
         <div className="table-wrap">
@@ -619,6 +620,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
           </table>
         </div>
       </section>
+      </>
       )}
     </main>
   );
