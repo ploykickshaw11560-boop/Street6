@@ -159,6 +159,49 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
   const totalDamage = useMemo(() => combos.reduce((sum, combo) => sum + combo.damage, 0), [combos]);
 
+  type StatsSortKey =
+    | 'name'
+    | 'health'
+    | 'walk_fwd'
+    | 'walk_bwd'
+    | 'dash_fwd_frames'
+    | 'dash_bwd_frames'
+    | 'dash_fwd_distance'
+    | 'dash_bwd_distance'
+    | 'pre_jump';
+
+  const [statsSort, setStatsSort] = useState<{ key: StatsSortKey; dir: 'asc' | 'desc' }>({
+    key: 'name',
+    dir: 'asc'
+  });
+
+  const toggleStatsSort = (key: StatsSortKey) => {
+    setStatsSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'name' ? 'asc' : 'desc' }
+    );
+  };
+
+  const sortedCharacters = useMemo(() => {
+    const list = [...characters];
+    const { key, dir } = statsSort;
+    list.sort((a, b) => {
+      const av = a[key];
+      const bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      const an = Number(av);
+      const bn = Number(bv);
+      return dir === 'asc' ? an - bn : bn - an;
+    });
+    return list;
+  }, [characters, statsSort]);
+
   const loadData = async () => {
     setStatus('データを同期しています...');
     const [charactersResult, masterMovesResult, framesResult, combosResult] = await Promise.all([
@@ -893,9 +936,82 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
       {mode === 'characters' && (
       <section className="character-info">
+        <div className="stats-table-wrap">
+          <div className="stats-table-header">
+            <h2>基礎情報一覧</h2>
+            <p className="field-help">
+              全キャラの基礎ステータス比較表。列ヘッダーをクリックすると並び替えできます。下のセレクトでキャラを選ぶと詳細と技マスタが見られます。
+            </p>
+          </div>
+          <div className="table-wrap">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th
+                    onClick={() => toggleStatsSort('name')}
+                    className={statsSort.key === 'name' ? `sort-${statsSort.dir}` : ''}
+                  >キャラ</th>
+                  <th
+                    onClick={() => toggleStatsSort('health')}
+                    className={statsSort.key === 'health' ? `sort-${statsSort.dir}` : ''}
+                  >体力</th>
+                  <th
+                    onClick={() => toggleStatsSort('walk_fwd')}
+                    className={statsSort.key === 'walk_fwd' ? `sort-${statsSort.dir}` : ''}
+                  >前歩き</th>
+                  <th
+                    onClick={() => toggleStatsSort('walk_bwd')}
+                    className={statsSort.key === 'walk_bwd' ? `sort-${statsSort.dir}` : ''}
+                  >後歩き</th>
+                  <th
+                    onClick={() => toggleStatsSort('dash_fwd_frames')}
+                    className={statsSort.key === 'dash_fwd_frames' ? `sort-${statsSort.dir}` : ''}
+                  >前ダッシュ(F)</th>
+                  <th
+                    onClick={() => toggleStatsSort('dash_bwd_frames')}
+                    className={statsSort.key === 'dash_bwd_frames' ? `sort-${statsSort.dir}` : ''}
+                  >後ダッシュ(F)</th>
+                  <th
+                    onClick={() => toggleStatsSort('dash_fwd_distance')}
+                    className={statsSort.key === 'dash_fwd_distance' ? `sort-${statsSort.dir}` : ''}
+                  >前ダッシュ距離</th>
+                  <th
+                    onClick={() => toggleStatsSort('dash_bwd_distance')}
+                    className={statsSort.key === 'dash_bwd_distance' ? `sort-${statsSort.dir}` : ''}
+                  >後ダッシュ距離</th>
+                  <th
+                    onClick={() => toggleStatsSort('pre_jump')}
+                    className={statsSort.key === 'pre_jump' ? `sort-${statsSort.dir}` : ''}
+                  >プリジャンプ(F)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedCharacters.map((character) => (
+                  <tr
+                    key={character.id}
+                    className={character.id === selectedCharacterId ? 'is-selected' : ''}
+                    onClick={() => setSelectedCharacterId(character.id)}
+                  >
+                    <td><strong>{character.name}</strong></td>
+                    <td>{character.health ?? '-'}</td>
+                    <td>{character.walk_fwd ?? '-'}</td>
+                    <td>{character.walk_bwd ?? '-'}</td>
+                    <td>{character.dash_fwd_frames ?? '-'}</td>
+                    <td>{character.dash_bwd_frames ?? '-'}</td>
+                    <td>{character.dash_fwd_distance ?? '-'}</td>
+                    <td>{character.dash_bwd_distance ?? '-'}</td>
+                    <td>{character.pre_jump ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="character-picker">
           <label className="field">
-            <span className="field-label">キャラクター</span>
+            <span className="field-label">キャラクター詳細</span>
+            <span className="field-help">選択するとステータス詳細と技マスタが下に表示されます</span>
             <select
               value={selectedCharacterId}
               onChange={(event) => setSelectedCharacterId(event.target.value)}
