@@ -522,7 +522,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
       {mode === 'register' && (
       <section className="accordion">
-        <details className="accordion-item" open>
+        <details className="accordion-item">
           <summary>1. キャラクター登録</summary>
           <div className="accordion-body">
           <p className="section-intro">
@@ -936,7 +936,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
       {mode === 'characters' && (
       <section className="accordion character-info">
-        <details className="accordion-item" open>
+        <details className="accordion-item">
           <summary>基礎情報一覧 ({characters.length}キャラ)</summary>
           <div className="accordion-body">
             <p className="field-help">
@@ -1008,7 +1008,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
           </div>
         </details>
 
-        <details className="accordion-item" open>
+        <details className="accordion-item">
           <summary>
             キャラクター詳細{(() => {
               const target = characters.find((c) => c.id === selectedCharacterId);
