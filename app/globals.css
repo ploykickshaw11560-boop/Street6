@@ -399,17 +399,123 @@ th {
 }
 
 .link-btn {
-  margin-left: auto;
   background: transparent;
-  color: #c0392b;
-  padding: 4px 8px;
+  color: #1f5bcc;
+  border: 1px solid #ccd5e8;
+  padding: 4px 10px;
   font-size: 12px;
   border-radius: 6px;
 }
 
 .link-btn:hover {
+  background: #eef3fc;
+}
+
+.link-btn.danger {
+  color: #c0392b;
+}
+
+.link-btn.danger:hover {
   background: #fdecea;
   color: #c0392b;
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.lock-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lock-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.lock-btn.unlocked {
+  background: #2ecc71;
+  border-color: #27ae60;
+  color: #fff;
+}
+
+.lock-btn.unlocked:hover {
+  background: #27ae60;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 27, 54, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 12px;
+}
+
+.modal h2 {
+  font-size: 18px;
+}
+
+.modal form {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.field-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.modal-actions .secondary {
+  background: #fff;
+  color: #2b3a5e;
+  border: 1px solid #ccd5e8;
+}
+
+.modal-actions .secondary:hover {
+  background: #eef3fc;
 }
 
 .character-info {

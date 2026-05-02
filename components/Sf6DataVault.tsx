@@ -147,6 +147,11 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
     notes: ''
   });
 
+  const [unlocked, setUnlocked] = useState(false);
+  const [editingFrame, setEditingFrame] = useState<FrameData | null>(null);
+  const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
+  const [editingMasterMove, setEditingMasterMove] = useState<MasterMove | null>(null);
+
   const [comboForm, setComboForm] = useState<ComboForm>({
     character_id: '',
     combo_name: '',
@@ -251,7 +256,114 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
 
   useEffect(() => {
     loadData();
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('sf6_edit_unlocked') === '1') {
+      setUnlocked(true);
+    }
   }, []);
+
+  const toggleUnlock = () => {
+    if (unlocked) {
+      window.sessionStorage.removeItem('sf6_edit_unlocked');
+      setUnlocked(false);
+      setStatus('編集モードを解除しました');
+      return;
+    }
+    const pw = window.prompt('編集モードのパスワードを入力してください');
+    if (pw === null) return;
+    if (pw === 'test') {
+      window.sessionStorage.setItem('sf6_edit_unlocked', '1');
+      setUnlocked(true);
+      setStatus('編集モードを有効化しました');
+    } else {
+      window.alert('パスワードが違います');
+    }
+  };
+
+  const handleFrameUpdate = async () => {
+    if (!editingFrame) return;
+    const { error } = await supabase
+      .from('frame_data')
+      .update({
+        character_id: editingFrame.character_id,
+        move_name: editingFrame.move_name,
+        command: editingFrame.command,
+        startup: editingFrame.startup,
+        active: editingFrame.active,
+        recovery: editingFrame.recovery,
+        on_hit: editingFrame.on_hit,
+        on_block: editingFrame.on_block,
+        notes: editingFrame.notes?.toString().trim() ? editingFrame.notes : null
+      })
+      .eq('id', editingFrame.id);
+    if (error) {
+      setStatus(`フレームデータ更新エラー: ${error.message}`);
+      return;
+    }
+    setEditingFrame(null);
+    await loadData();
+  };
+
+  const handleFrameDelete = async (id: string) => {
+    if (!confirm('このフレームデータを削除しますか?')) return;
+    const { error } = await supabase.from('frame_data').delete().eq('id', id);
+    if (error) {
+      setStatus(`フレームデータ削除エラー: ${error.message}`);
+      return;
+    }
+    await loadData();
+  };
+
+  const handleComboUpdate = async () => {
+    if (!editingCombo) return;
+    const { error } = await supabase
+      .from('combos')
+      .update({
+        character_id: editingCombo.character_id,
+        combo_name: editingCombo.combo_name,
+        difficulty: editingCombo.difficulty,
+        damage: editingCombo.damage,
+        drive_gauge_change: editingCombo.drive_gauge_change,
+        combo_route: editingCombo.combo_route,
+        notes: editingCombo.notes?.toString().trim() ? editingCombo.notes : null
+      })
+      .eq('id', editingCombo.id);
+    if (error) {
+      setStatus(`コンボ更新エラー: ${error.message}`);
+      return;
+    }
+    setEditingCombo(null);
+    await loadData();
+  };
+
+  const handleComboDelete = async (id: string) => {
+    if (!confirm('このコンボを削除しますか?')) return;
+    const { error } = await supabase.from('combos').delete().eq('id', id);
+    if (error) {
+      setStatus(`コンボ削除エラー: ${error.message}`);
+      return;
+    }
+    await loadData();
+  };
+
+  const handleMasterMoveUpdate = async () => {
+    if (!editingMasterMove) return;
+    const { error } = await supabase
+      .from('master_moves')
+      .update({
+        move_name: editingMasterMove.move_name,
+        command: editingMasterMove.command,
+        category: editingMasterMove.category,
+        display_order: editingMasterMove.display_order,
+        notes: editingMasterMove.notes?.toString().trim() ? editingMasterMove.notes : null
+      })
+      .eq('id', editingMasterMove.id);
+    if (error) {
+      setStatus(`技マスタ更新エラー: ${error.message}`);
+      return;
+    }
+    setEditingMasterMove(null);
+    await loadData();
+  };
 
   const ensureCharacters = async (names: string[]) => {
     const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter((name) => name.length > 0)));
@@ -511,7 +623,17 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
   return (
     <main>
       <section className="hero">
-        <h1>SF6 Data Vault</h1>
+        <div className="hero-row">
+          <h1>SF6 Data Vault</h1>
+          <button
+            type="button"
+            className={`lock-btn ${unlocked ? 'unlocked' : ''}`}
+            onClick={toggleUnlock}
+            title={unlocked ? '編集モード解除' : '編集モード(要パスワード)'}
+          >
+            {unlocked ? '🔓 編集モード ON' : '🔒 編集モード OFF'}
+          </button>
+        </div>
         <p>Supabaseへフレームデータ・コンボデータを登録/管理して、Vercelでそのまま公開できます。</p>
         <p>
           キャラ数: <strong>{characters.length}</strong> / フレームデータ: <strong>{frames.length}</strong> / コンボ:{' '}
@@ -916,13 +1038,24 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                           <span className="move-pill">{move.category}</span>
                           <strong>{move.move_name}</strong>
                           <code>{move.command}</code>
-                          <button
-                            type="button"
-                            className="link-btn"
-                            onClick={() => handleMasterMoveDelete(move.id)}
-                          >
-                            削除
-                          </button>
+                          {unlocked && (
+                            <span className="row-actions">
+                              <button
+                                type="button"
+                                className="link-btn"
+                                onClick={() => setEditingMasterMove(move)}
+                              >
+                                編集
+                              </button>
+                              <button
+                                type="button"
+                                className="link-btn danger"
+                                onClick={() => handleMasterMoveDelete(move.id)}
+                              >
+                                削除
+                              </button>
+                            </span>
+                          )}
                         </li>
                       ))}
                   </ul>
@@ -1113,6 +1246,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                 <th>ヒット</th>
                 <th>ガード</th>
                 <th>補足</th>
+                {unlocked && <th>操作</th>}
               </tr>
             </thead>
             <tbody>
@@ -1127,6 +1261,12 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                   <td>{row.on_hit}</td>
                   <td>{row.on_block}</td>
                   <td>{row.notes}</td>
+                  {unlocked && (
+                    <td className="row-actions">
+                      <button type="button" className="link-btn" onClick={() => setEditingFrame(row)}>編集</button>
+                      <button type="button" className="link-btn danger" onClick={() => handleFrameDelete(row.id)}>削除</button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1147,6 +1287,7 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                 <th>ゲージ増減</th>
                 <th>ルート</th>
                 <th>補足</th>
+                {unlocked && <th>操作</th>}
               </tr>
             </thead>
             <tbody>
@@ -1159,6 +1300,12 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
                   <td>{row.drive_gauge_change}</td>
                   <td>{row.combo_route}</td>
                   <td>{row.notes}</td>
+                  {unlocked && (
+                    <td className="row-actions">
+                      <button type="button" className="link-btn" onClick={() => setEditingCombo(row)}>編集</button>
+                      <button type="button" className="link-btn danger" onClick={() => handleComboDelete(row.id)}>削除</button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1166,6 +1313,280 @@ export default function Sf6DataVault({ mode }: { mode: ViewMode }) {
         </div>
       </section>
       </>
+      )}
+
+      {editingFrame && (
+        <div className="modal-backdrop" onClick={() => setEditingFrame(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>フレームデータ編集</h2>
+            <p className="field-help">{editingFrame.character?.name ?? ''} の技データを編集します。</p>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleFrameUpdate();
+              }}
+            >
+              <label className="field">
+                <span className="field-label">技名</span>
+                <input
+                  value={editingFrame.move_name}
+                  onChange={(event) =>
+                    setEditingFrame({ ...editingFrame, move_name: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">コマンド</span>
+                <input
+                  value={editingFrame.command}
+                  onChange={(event) =>
+                    setEditingFrame({ ...editingFrame, command: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <div className="field-grid">
+                <label className="field">
+                  <span className="field-label">発生</span>
+                  <input
+                    type="number"
+                    value={editingFrame.startup}
+                    onChange={(event) =>
+                      setEditingFrame({ ...editingFrame, startup: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">持続</span>
+                  <input
+                    type="number"
+                    value={editingFrame.active}
+                    onChange={(event) =>
+                      setEditingFrame({ ...editingFrame, active: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">硬直</span>
+                  <input
+                    type="number"
+                    value={editingFrame.recovery}
+                    onChange={(event) =>
+                      setEditingFrame({ ...editingFrame, recovery: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">ヒット</span>
+                  <input
+                    type="number"
+                    value={editingFrame.on_hit}
+                    onChange={(event) =>
+                      setEditingFrame({ ...editingFrame, on_hit: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">ガード</span>
+                  <input
+                    type="number"
+                    value={editingFrame.on_block}
+                    onChange={(event) =>
+                      setEditingFrame({ ...editingFrame, on_block: Number(event.target.value) })
+                    }
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span className="field-label">補足</span>
+                <textarea
+                  value={editingFrame.notes ?? ''}
+                  onChange={(event) =>
+                    setEditingFrame({ ...editingFrame, notes: event.target.value })
+                  }
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="secondary" onClick={() => setEditingFrame(null)}>
+                  キャンセル
+                </button>
+                <button type="submit">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingCombo && (
+        <div className="modal-backdrop" onClick={() => setEditingCombo(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>コンボ編集</h2>
+            <p className="field-help">{editingCombo.character?.name ?? ''} のコンボを編集します。</p>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleComboUpdate();
+              }}
+            >
+              <label className="field">
+                <span className="field-label">コンボ名</span>
+                <input
+                  value={editingCombo.combo_name}
+                  onChange={(event) =>
+                    setEditingCombo({ ...editingCombo, combo_name: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">難易度</span>
+                <select
+                  value={editingCombo.difficulty}
+                  onChange={(event) =>
+                    setEditingCombo({
+                      ...editingCombo,
+                      difficulty: event.target.value as Combo['difficulty']
+                    })
+                  }
+                >
+                  <option value="Easy">Easy</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </label>
+              <div className="field-grid">
+                <label className="field">
+                  <span className="field-label">ダメージ</span>
+                  <input
+                    type="number"
+                    value={editingCombo.damage}
+                    onChange={(event) =>
+                      setEditingCombo({ ...editingCombo, damage: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field-label">ゲージ増減</span>
+                  <input
+                    type="number"
+                    value={editingCombo.drive_gauge_change}
+                    onChange={(event) =>
+                      setEditingCombo({
+                        ...editingCombo,
+                        drive_gauge_change: Number(event.target.value)
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span className="field-label">コンボルート</span>
+                <textarea
+                  value={editingCombo.combo_route}
+                  onChange={(event) =>
+                    setEditingCombo({ ...editingCombo, combo_route: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">補足</span>
+                <textarea
+                  value={editingCombo.notes ?? ''}
+                  onChange={(event) =>
+                    setEditingCombo({ ...editingCombo, notes: event.target.value })
+                  }
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="secondary" onClick={() => setEditingCombo(null)}>
+                  キャンセル
+                </button>
+                <button type="submit">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingMasterMove && (
+        <div className="modal-backdrop" onClick={() => setEditingMasterMove(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>技マスタ編集</h2>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleMasterMoveUpdate();
+              }}
+            >
+              <label className="field">
+                <span className="field-label">技名</span>
+                <input
+                  value={editingMasterMove.move_name}
+                  onChange={(event) =>
+                    setEditingMasterMove({ ...editingMasterMove, move_name: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">コマンド</span>
+                <input
+                  value={editingMasterMove.command}
+                  onChange={(event) =>
+                    setEditingMasterMove({ ...editingMasterMove, command: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">種類</span>
+                <select
+                  value={editingMasterMove.category}
+                  onChange={(event) =>
+                    setEditingMasterMove({
+                      ...editingMasterMove,
+                      category: event.target.value as MoveCategory
+                    })
+                  }
+                >
+                  {MOVE_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">表示順</span>
+                <input
+                  type="number"
+                  value={editingMasterMove.display_order}
+                  onChange={(event) =>
+                    setEditingMasterMove({
+                      ...editingMasterMove,
+                      display_order: Number(event.target.value)
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">補足</span>
+                <textarea
+                  value={editingMasterMove.notes ?? ''}
+                  onChange={(event) =>
+                    setEditingMasterMove({ ...editingMasterMove, notes: event.target.value })
+                  }
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="secondary" onClick={() => setEditingMasterMove(null)}>
+                  キャンセル
+                </button>
+                <button type="submit">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </main>
   );
